@@ -40,6 +40,7 @@ QVApplication::QVApplication(int &argc, char **argv) : QApplication(argc, argv)
     filterString += ")";
 
     nameFilterList << filterString;
+    nameFilterList << "Supported Archives(*.cbz *.zip)";
     nameFilterList << tr("All Files") + " (*)";
 
     // Check for updates

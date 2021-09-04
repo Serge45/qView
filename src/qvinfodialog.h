@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QFileInfo>
 #include <QLocale>
+#include "qvimageinfo.h"
 
 namespace Ui {
 class QVInfoDialog;
@@ -17,18 +18,17 @@ public:
     explicit QVInfoDialog(QWidget *parent = nullptr);
     ~QVInfoDialog();
 
-    void setInfo(const QFileInfo &value, const int &value2, const int &value3, const int &value4);
+    void setInfo(const QVImageInfo &imageInfo) {
+        this->imageInfo = imageInfo;
+        updateInfo();
+        window()->adjustSize();
+    }
 
     void updateInfo();
 
 private:
     Ui::QVInfoDialog *ui;
-
-    QFileInfo selectedFileInfo;
-    int width;
-    int height;
-
-    int frameCount;
+    QVImageInfo imageInfo;
 
 public:
     // If Qt 5.10 is available, the built-in function will be used--for Qt 5.9, a custom solution will be used

@@ -2,6 +2,7 @@
 #include "qvapplication.h"
 #include "qvinfodialog.h"
 #include "qvcocoafunctions.h"
+#include "qvzipfile.h"
 #include <QWheelEvent>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
@@ -386,7 +387,11 @@ void QVGraphicsView::postLoad()
         movieCenterNeedsUpdating = false;
 
     updateLoadedPixmapItem();
-    qvApp->getActionManager().addFileToRecentsList(getCurrentFileDetails().fileInfo);
+
+    const auto fileInfo = imageCore.archiveMode() ?
+                            QFileInfo(imageCore.archiveFile()->getFilePath()) : getCurrentFileDetails().fileInfo;
+
+    qvApp->getActionManager().addFileToRecentsList(fileInfo);
 
     emit fileChanged();
 }
@@ -552,10 +557,15 @@ void QVGraphicsView::goToFile(const GoToFileMode &mode, int index)
     }
 
     const QFileInfo nextImage = getCurrentFileDetails().folderFileInfoList.value(newIndex);
-    if (!nextImage.isFile())
-        return;
 
-    loadFile(nextImage.absoluteFilePath());
+    if (auto *archiveFile = imageCore.archiveFile()) {
+        imageCore.loadArchiveFile(*archiveFile, nextImage.filePath());
+    } else {
+        if (!nextImage.isFile())
+            return;
+
+        loadFile(nextImage.absoluteFilePath());
+    }
 }
 
 void QVGraphicsView::fitInViewMarginless(bool setVariables)
@@ -763,4 +773,12 @@ void QVGraphicsView::setSpeed(const int &desiredSpeed)
 void QVGraphicsView::rotateImage(int rotation)
 {
     imageCore.rotateImage(rotation);
+}
+
+QString QVGraphicsView::getCurrentlyLoadedFilePath() const
+{
+    if (getLoadedArchiveFile()) {
+        return getLoadedArchiveFile()->getFilePath();
+    }
+    return getCurrentFileDetails().fileInfo.absolutePath();
 }

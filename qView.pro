@@ -48,7 +48,7 @@ win32 {
     }
 
     RC_ICONS = "dist/win/qView.ico"
-    QMAKE_TARGET_COPYRIGHT = "Copyright © 2020 jurplel and qView contributors"
+    QMAKE_TARGET_COPYRIGHT = "Copyright ? 2020 jurplel and qView contributors"
     QMAKE_TARGET_DESCRIPTION = "qView"
 }
 
@@ -139,4 +139,11 @@ lupdate_only {
 
 RESOURCES += \
     resources/resources.qrc
+
+HEADERS += \
+    3rdparty/zip/src/miniz.h \
+    3rdparty/zip/src/zip.h
+
+SOURCES += \
+    3rdparty/zip/src/zip.c
 

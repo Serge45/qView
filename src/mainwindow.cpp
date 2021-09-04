@@ -3,6 +3,7 @@
 #include "qvapplication.h"
 #include "qvcocoafunctions.h"
 #include "qvrenamedialog.h"
+#include "qvzipfile.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -356,7 +357,7 @@ void MainWindow::disableActions()
 void MainWindow::requestPopulateOpenWithMenu()
 {
     openWithFutureWatcher.setFuture(QtConcurrent::run([&]{
-        const auto &curFilePath = getCurrentFileDetails().fileInfo.absoluteFilePath();
+        auto curFilePath = graphicsView->getCurrentlyLoadedFilePath();
         return OpenWith::getOpenWithItems(curFilePath);
     }));
 }
@@ -391,18 +392,21 @@ void MainWindow::populateOpenWithMenu(const QList<OpenWith::OpenWithItem> openWi
 
 void MainWindow::refreshProperties()
 {
-    int value4;
-    if (getCurrentFileDetails().isMovieLoaded)
-        value4 = graphicsView->getLoadedMovie().frameCount();
-    else
-        value4 = 0;
-    info->setInfo(getCurrentFileDetails().fileInfo, getCurrentFileDetails().baseImageSize.width(), getCurrentFileDetails().baseImageSize.height(), value4);
+    if (auto *archiveEntry = graphicsView->getLoadedArchiveEntry()) {
+        const auto archivePath = graphicsView->getLoadedArchiveFile()->getFilePath();
+        const auto entryPath = graphicsView->getCurrentFileDetails().fileInfo.filePath();
+        info->setInfo(QVImageInfo::createFromArchiveEntry(archiveEntry->buffer(),
+                                                          archivePath,
+                                                          entryPath));
+    } else {
+        info->setInfo(QVImageInfo::createFromFileInfo(getCurrentFileDetails().fileInfo));
+    }
 }
 
 void MainWindow::buildWindowTitle()
 {
     QString newString = "qView";
-    if (getCurrentFileDetails().fileInfo.isFile())
+    if (getCurrentFileDetails().fileInfo.isFile() || graphicsView->getLoadedArchiveFile())
     {
         switch (qvApp->getSettingsManager().getInteger("titlebarmode")) {
         case 1:
@@ -424,7 +428,13 @@ void MainWindow::buildWindowTitle()
             newString += " - " + getCurrentFileDetails().fileInfo.fileName();
             newString += " - "  + QString::number(getCurrentFileDetails().baseImageSize.width());
             newString += "x" + QString::number(getCurrentFileDetails().baseImageSize.height());
-            newString += " - " + QVInfoDialog::formatBytes(getCurrentFileDetails().fileInfo.size());
+
+            if (getCurrentFileDetails().fileInfo.isFile()) {
+                newString += " - " + QVInfoDialog::formatBytes(getCurrentFileDetails().fileInfo.size());
+            } else {
+                newString += " - " + QVInfoDialog::formatBytes(graphicsView->getLoadedArchiveEntry()->buffer().size());
+            }
+
             newString += " - qView";
             break;
         }
@@ -623,7 +633,8 @@ void MainWindow::pickUrl()
 
 void MainWindow::openWith(const OpenWith::OpenWithItem &openWithItem)
 {
-    OpenWith::openWith(getCurrentFileDetails().fileInfo.absoluteFilePath(), openWithItem);
+    const auto filePath = graphicsView->getCurrentlyLoadedFilePath();
+    OpenWith::openWith(filePath, openWithItem);
 }
 
 void MainWindow::openContainingFolder()
@@ -631,7 +642,7 @@ void MainWindow::openContainingFolder()
     if (!getCurrentFileDetails().isPixmapLoaded)
         return;
 
-    const QFileInfo selectedFileInfo = getCurrentFileDetails().fileInfo;
+    const QFileInfo selectedFileInfo(graphicsView->getCurrentlyLoadedFilePath());
 
 #ifdef Q_OS_WIN
     QProcess::startDetached("explorer", QStringList() << "/select," << QDir::toNativeSeparators(selectedFileInfo.absoluteFilePath()));
@@ -688,7 +699,7 @@ void MainWindow::askDeleteFile()
 
 void MainWindow::deleteFile()
 {
-    const QFileInfo &fileInfo = getCurrentFileDetails().fileInfo;
+    const QFileInfo fileInfo(graphicsView->getCurrentlyLoadedFilePath());
     const QString filePath = fileInfo.absoluteFilePath();
     const QString fileName = fileInfo.fileName();
     QString trashFilePath = "";
@@ -828,7 +839,9 @@ void MainWindow::rename()
     if (!getCurrentFileDetails().isPixmapLoaded)
         return;
 
-    auto *renameDialog = new QVRenameDialog(this, getCurrentFileDetails().fileInfo);
+    QFileInfo fileInfo(graphicsView->getCurrentlyLoadedFilePath());
+
+    auto *renameDialog = new QVRenameDialog(this, fileInfo);
     connect(renameDialog, &QVRenameDialog::newFileToOpen, this, &MainWindow::openFile);
     connect(renameDialog, &QVRenameDialog::readyToRenameFile, this, [this] () {
         if (auto device = graphicsView->getLoadedMovie().device()) {

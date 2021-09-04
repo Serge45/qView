@@ -1,5 +1,6 @@
 #include "qvimagecore.h"
 #include "qvapplication.h"
+#include "qvzipfile.h"
 #include <random>
 #include <QMessageBox>
 #include <QDir>
@@ -79,7 +80,14 @@ void QVImageCore::loadFile(const QString &fileName)
     setPaused(true);
 
     currentFileDetails.isLoadRequested = true;
+    currentArchiveFile.reset();
+    currentLoadedArchiveEntry.reset();
 
+    if (QStringList{"zip", "cbz"}.count(fileInfo.suffix().toLower())) {
+        QScopedPointer<QVArchiveFile> zipFile(new QVZipFile(fileName));
+        qSwap(currentArchiveFile, zipFile);
+        return loadArchiveFile(*currentArchiveFile, 0);
+    }
 
     //check if cached already before loading the long way
     auto previouslyRecordedFileSize = qvApp->getPreviouslyRecordedFileSize(sanitaryFileName);
@@ -101,6 +109,60 @@ void QVImageCore::loadFile(const QString &fileName)
         loadFutureWatcher.setFuture(QtConcurrent::run(this, &QVImageCore::readFile, sanitaryFileName, false));
     }
     delete cachedPixmap;
+}
+
+void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, std::size_t idx)
+{
+    if (loadFutureWatcher.isRunning() || fileChangeRateTimer->isActive())
+        return;
+
+    setPaused(true);
+    currentFileDetails.isLoadRequested = true;
+
+    Q_ASSERT(archiveFile.isValid());
+    const auto fileList = archiveFile.listEntries();
+    Q_ASSERT(idx < static_cast<std::size_t>(fileList.size()));
+    currentLoadedArchiveEntry.reset(new QBuffer);
+    currentLoadedArchiveEntry->open(QIODevice::ReadWrite);
+    archiveFile.readTo(*currentLoadedArchiveEntry, static_cast<QVZipFile::IndexType>(idx));
+    currentLoadedArchiveEntry->seek(0);
+    auto readData = readFromIODevice(currentLoadedArchiveEntry.get(), fileList[static_cast<QVZipFile::IndexType>(idx)]);
+    currentLoadedArchiveEntry->seek(0);
+    loadPixmap(readData, false);
+}
+
+void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, const QString &entryPath)
+{
+    if (loadFutureWatcher.isRunning() || fileChangeRateTimer->isActive())
+        return;
+
+    setPaused(true);
+    currentFileDetails.isLoadRequested = true;
+
+    Q_ASSERT(archiveFile.isValid());
+    const auto fileList = archiveFile.listEntries();
+    currentLoadedArchiveEntry.reset(new QBuffer);
+    currentLoadedArchiveEntry->open(QIODevice::ReadWrite);
+    archiveFile.readTo(*currentLoadedArchiveEntry, entryPath);
+    currentLoadedArchiveEntry->seek(0);
+    auto readData = readFromIODevice(currentLoadedArchiveEntry.get(), entryPath);
+    currentLoadedArchiveEntry->seek(0);
+    loadPixmap(readData, false);
+}
+
+QVImageCore::ReadData QVImageCore::readFromIODevice(QIODevice *device,
+                              const QString &archiveName)
+{
+    QImageReader imageReader(device);
+    imageReader.setDecideFormatFromContent(true);
+    imageReader.setAutoTransform(true);
+    auto readPixmap = QPixmap::fromImageReader(&imageReader);
+
+    return {
+        readPixmap,
+        QFileInfo(archiveName),
+        imageReader.size()
+    };
 }
 
 QVImageCore::ReadData QVImageCore::readFile(const QString &fileName, bool forCache)
@@ -173,7 +235,12 @@ void QVImageCore::loadPixmap(const ReadData &readData, bool fromCache)
 
     // Animation detection
     loadedMovie.stop();
-    loadedMovie.setFileName(currentFileDetails.fileInfo.absoluteFilePath());
+
+    if (currentArchiveFile) {
+        loadedMovie.setDevice(currentLoadedArchiveEntry.get());
+    } else {
+        loadedMovie.setFileName(currentFileDetails.fileInfo.absoluteFilePath());
+    }
 
     // APNG workaround
     if (loadedMovie.format() == "png")
@@ -212,7 +279,7 @@ void QVImageCore::closeImage()
 
 void QVImageCore::updateFolderInfo()
 {
-    if (!currentFileDetails.fileInfo.isFile())
+    if (!currentFileDetails.fileInfo.isFile() && !currentArchiveFile)
         return;
 
     QPair<QString, uint> dirInfo = {currentFileDetails.fileInfo.absoluteDir().path(),
@@ -245,7 +312,12 @@ void QVImageCore::updateFolderInfo()
     if (sortDescending)
         sortFlags.setFlag(QDir::Reversed, true);
 
-    currentFileDetails.folderFileInfoList = currentFileDetails.fileInfo.dir().entryInfoList(qvApp->getFilterList(), QDir::Files, sortFlags);
+    if (currentArchiveFile) {
+        // Currently we don't support sortFlags for archive file
+        currentFileDetails.folderFileInfoList = currentArchiveFile->fileInfoList();
+    } else {
+        currentFileDetails.folderFileInfoList = currentFileDetails.fileInfo.dir().entryInfoList(qvApp->getFilterList(), QDir::Files, sortFlags);
+    }
 
     // For more special types of sorting
     if (sortMode == 0) // Natural sorting
@@ -257,9 +329,9 @@ void QVImageCore::updateFolderInfo()
                   [&collator, this](const QFileInfo &file1, const QFileInfo &file2)
         {
             if (sortDescending)
-                return collator.compare(file1.fileName(), file2.fileName()) > 0;
+                return collator.compare(file1.filePath(), file2.filePath()) > 0;
             else
-                return collator.compare(file1.fileName(), file2.fileName()) < 0;
+                return collator.compare(file1.filePath(), file2.filePath()) < 0;
         });
     }
     else if (sortMode == 4) // Random sorting
@@ -267,8 +339,16 @@ void QVImageCore::updateFolderInfo()
         std::shuffle(currentFileDetails.folderFileInfoList.begin(), currentFileDetails.folderFileInfoList.end(), std::default_random_engine(randomSortSeed));
     }
 
-    // Set current file index variable
-    currentFileDetails.loadedIndexInFolder = currentFileDetails.folderFileInfoList.indexOf(currentFileDetails.fileInfo);
+    if (currentArchiveFile) {
+        const auto currentIdx = std::find_if(currentFileDetails.folderFileInfoList.begin(),
+                                             currentFileDetails.folderFileInfoList.end(), [this](const QFileInfo &info) {
+                                                return info.filePath() == currentFileDetails.fileInfo.filePath();
+                                             }) - currentFileDetails.folderFileInfoList.begin();
+        currentFileDetails.loadedIndexInFolder = currentIdx;
+    } else {
+        // Set current file index variable
+        currentFileDetails.loadedIndexInFolder = currentFileDetails.folderFileInfoList.indexOf(currentFileDetails.fileInfo);
+    }
 }
 
 void QVImageCore::requestCaching()

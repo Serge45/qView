@@ -12,6 +12,7 @@ SOURCES += \
     $$PWD/qvimagecore.cpp \
     $$PWD/qvshortcutdialog.cpp \
     $$PWD/actionmanager.cpp \
+    $$PWD/qvzipfile.cpp \
     $$PWD/settingsmanager.cpp \
     $$PWD/shortcutmanager.cpp \
     $$PWD/updatechecker.cpp
@@ -22,7 +23,9 @@ win32:!CONFIG(NO_WIN32):SOURCES += $$PWD/qvwin32functions.cpp
 HEADERS += \
     $$PWD/mainwindow.h \
     $$PWD/openwith.h \
+    $$PWD/qvarchivefile.h \
     $$PWD/qvgraphicsview.h \
+    $$PWD/qvimageinfo.h \
     $$PWD/qvoptionsdialog.h \
     $$PWD/qvapplication.h \
     $$PWD/qvaboutdialog.h \
@@ -32,9 +35,11 @@ HEADERS += \
     $$PWD/qvimagecore.h \
     $$PWD/qvshortcutdialog.h \
     $$PWD/actionmanager.h \
+    $$PWD/qvzipfile.h \
     $$PWD/settingsmanager.h \
     $$PWD/shortcutmanager.h \
-    $$PWD/updatechecker.h
+    $$PWD/updatechecker.h\
+    $$PWD/qvimageinfo.h\
 
 macx:!CONFIG(NO_COCOA):HEADERS += $$PWD/qvcocoafunctions.h
 win32:!CONFIG(NO_WIN32):HEADERS += $$PWD/qvwin32functions.h

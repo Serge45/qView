@@ -1,6 +1,8 @@
 ﻿#ifndef QVIMAGECORE_H
 #define QVIMAGECORE_H
 
+#include "qvarchivefile.h"
+#include <QBuffer>
 #include <QObject>
 #include <QImageReader>
 #include <QPixmap>
@@ -9,6 +11,7 @@
 #include <QFutureWatcher>
 #include <QTimer>
 #include <QCache>
+#include <QScopedPointer>
 
 class QVImageCore : public QObject
 {
@@ -45,6 +48,10 @@ public:
     explicit QVImageCore(QObject *parent = nullptr);
 
     void loadFile(const QString &fileName);
+    void loadArchiveFile(QVArchiveFile &archiveFile, std::size_t idx);
+    void loadArchiveFile(QVArchiveFile &archiveFile, const QString &entryPath);
+    ReadData readFromIODevice(QIODevice *device,
+                              const QString &archiveName);
     ReadData readFile(const QString &fileName, bool forCache);
     void loadPixmap(const ReadData &readData, bool fromCache);
     void closeImage();
@@ -71,6 +78,11 @@ public:
     const QMovie& getLoadedMovie() const {return loadedMovie; }
     const FileDetails& getCurrentFileDetails() const {return currentFileDetails; }
     int getCurrentRotation() const {return currentRotation; }
+    bool archiveMode() const { return currentArchiveFile; }
+    QVArchiveFile *archiveFile() { return currentArchiveFile.get(); }
+    const QVArchiveFile *archiveFile() const { return currentArchiveFile.data(); }
+    QBuffer *loadedArchiveEntry() { return currentLoadedArchiveEntry.get(); }
+    const QBuffer *loadedArchiveEntry() const { return currentLoadedArchiveEntry.data(); }
 
 signals:
     void animatedFrameChanged(QRect rect);
@@ -103,6 +115,9 @@ private:
     QTimer *fileChangeRateTimer;
 
     int largestDimension;
+
+    QScopedPointer<QVArchiveFile> currentArchiveFile;
+    QScopedPointer<QBuffer> currentLoadedArchiveEntry;
 };
 
 #endif // QVIMAGECORE_H

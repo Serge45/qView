@@ -8,6 +8,9 @@
 #include <QDir>
 #include <QTimer>
 #include <QFileInfo>
+#include <QPointer>
+
+class QVArchiveFile;
 
 class QVGraphicsView : public QGraphicsView
 {
@@ -56,6 +59,10 @@ public:
     const QVImageCore::FileDetails& getCurrentFileDetails() const { return imageCore.getCurrentFileDetails(); }
     const QPixmap& getLoadedPixmap() const { return imageCore.getLoadedPixmap(); }
     const QMovie& getLoadedMovie() const { return imageCore.getLoadedMovie(); }
+    const QBuffer *getLoadedArchiveEntry() const { return imageCore.loadedArchiveEntry(); }
+    QBuffer *getLoadedArchiveEntry() { return imageCore.loadedArchiveEntry(); }
+    const QVArchiveFile *getLoadedArchiveFile() const { return imageCore.archiveFile(); }
+    QString getCurrentlyLoadedFilePath() const;
 
 signals:
     void cancelSlideshow();
