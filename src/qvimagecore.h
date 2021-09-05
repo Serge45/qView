@@ -57,6 +57,7 @@ public:
     void closeImage();
     void updateFolderInfo();
     void requestCaching();
+    void requestCacheArchiveEntry(const QString &entryPath);
     void requestCachingFile(const QString &filePath);
     void addToCache(const ReadData &readImageAndFileInfo);
 

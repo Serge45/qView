@@ -393,10 +393,9 @@ void MainWindow::populateOpenWithMenu(const QList<OpenWith::OpenWithItem> openWi
 void MainWindow::refreshProperties()
 {
     if (auto *archiveEntry = graphicsView->getLoadedArchiveEntry()) {
-        const auto archivePath = graphicsView->getLoadedArchiveFile()->getFilePath();
         const auto entryPath = graphicsView->getCurrentFileDetails().fileInfo.filePath();
         info->setInfo(QVImageInfo::createFromArchiveEntry(archiveEntry->buffer(),
-                                                          archivePath,
+                                                          *graphicsView->getLoadedArchiveFile(),
                                                           entryPath));
     } else {
         info->setInfo(QVImageInfo::createFromFileInfo(getCurrentFileDetails().fileInfo));

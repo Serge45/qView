@@ -120,8 +120,19 @@ void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, std::size_t idx)
     currentFileDetails.isLoadRequested = true;
 
     Q_ASSERT(archiveFile.isValid());
-    const auto fileList = archiveFile.listEntries();
+    const auto &fileList = archiveFile.listEntries();
     Q_ASSERT(idx < static_cast<std::size_t>(fileList.size()));
+    auto entryPath = fileList[idx];
+
+    QPixmap cachedPixmap;
+
+    if (QPixmapCache::find(QFileInfo(entryPath).absoluteFilePath(), &cachedPixmap)) {
+        loadPixmap({cachedPixmap,
+                    QFileInfo(entryPath),
+                    cachedPixmap.size()},
+                    true);
+    }
+
     currentLoadedArchiveEntry.reset(new QBuffer);
     currentLoadedArchiveEntry->open(QIODevice::ReadWrite);
     archiveFile.readTo(*currentLoadedArchiveEntry, static_cast<QVZipFile::IndexType>(idx));
@@ -140,7 +151,17 @@ void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, const QString &ent
     currentFileDetails.isLoadRequested = true;
 
     Q_ASSERT(archiveFile.isValid());
-    const auto fileList = archiveFile.listEntries();
+
+    QPixmap cachedPixmap;
+
+    if (QPixmapCache::find(QFileInfo(entryPath).absoluteFilePath(), &cachedPixmap)) {
+        loadPixmap({cachedPixmap,
+                    QFileInfo(entryPath),
+                    cachedPixmap.size()},
+                    true);
+        return;
+    }
+
     currentLoadedArchiveEntry.reset(new QBuffer);
     currentLoadedArchiveEntry->open(QIODevice::ReadWrite);
     archiveFile.readTo(*currentLoadedArchiveEntry, entryPath);
@@ -386,13 +407,46 @@ void QVImageCore::requestCaching()
         if (index > currentFileDetails.folderFileInfoList.length()-1 || index < 0 || currentFileDetails.folderFileInfoList.isEmpty())
             continue;
 
-        QString filePath = currentFileDetails.folderFileInfoList[index].absoluteFilePath();
-        filesToPreload.append(filePath);
-
-        requestCachingFile(filePath);
+        if (archiveMode()) {
+            QString entryPath = currentFileDetails.folderFileInfoList[index].filePath();
+            filesToPreload.append(entryPath);
+            requestCacheArchiveEntry(entryPath);
+        } else {
+            QString filePath = currentFileDetails.folderFileInfoList[index].absoluteFilePath();
+            filesToPreload.append(filePath);
+            requestCachingFile(filePath);
+        }
     }
     lastFilesPreloaded = filesToPreload;
 
+}
+
+void QVImageCore::requestCacheArchiveEntry(const QString &entryPath)
+{
+    //check if image is already loaded or requested
+    if (QPixmapCache::find(entryPath, nullptr) || lastFilesPreloaded.contains(entryPath))
+        return;
+
+    //check if too big for caching
+    QSharedPointer<QByteArray> sharedData(new QByteArray);
+    QSharedPointer<QBuffer> buffer(new QBuffer(sharedData.get()));
+    buffer->open(QBuffer::ReadWrite);
+    archiveFile()->readTo(*buffer, entryPath);
+    QImageReader newImageReader(buffer.get());
+    QTransform transform;
+    transform.rotate(currentRotation);
+    if (((newImageReader.size().width()*newImageReader.size().height()*32)/8)/1000 > QPixmapCache::cacheLimit()/2)
+        return;
+
+    auto *cacheFutureWatcher = new QFutureWatcher<ReadData>();
+    connect(cacheFutureWatcher, &QFutureWatcher<ReadData>::finished, this, [cacheFutureWatcher, sharedData, buffer, this]() mutable {
+        buffer.clear();
+        sharedData.clear();
+        addToCache(cacheFutureWatcher->result());
+        cacheFutureWatcher->deleteLater();
+    });
+    buffer->seek(0);
+    cacheFutureWatcher->setFuture(QtConcurrent::run(this, &QVImageCore::readFromIODevice, buffer.get(), entryPath));
 }
 
 void QVImageCore::requestCachingFile(const QString &filePath)
@@ -424,7 +478,9 @@ void QVImageCore::addToCache(const ReadData &readData)
 
     QPixmapCache::insert(readData.fileInfo.absoluteFilePath(), readData.pixmap);
 
-    auto *size = new qint64(readData.fileInfo.size());
+    auto *size = new qint64(archiveMode() ?
+                            currentArchiveFile->entryNumBytes(readData.fileInfo.filePath()) :
+                            readData.fileInfo.size());
     qvApp->setPreviouslyRecordedFileSize(readData.fileInfo.absoluteFilePath(), size);
     qvApp->setPreviouslyRecordedImageSize(readData.fileInfo.absoluteFilePath(), new QSize(readData.size));
 }

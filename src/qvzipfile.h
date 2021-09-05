@@ -9,7 +9,6 @@
 class QVZipFile : public QVArchiveFile
 {
 public:
-    using IndexType = long;
     explicit QVZipFile(const QString &filepath);
     ~QVZipFile();
     bool isValid() const override;
@@ -18,6 +17,7 @@ public:
     QFileInfoList fileInfoList() const;
     QByteArray read(IndexType idx) const override;
     QByteArray read(const QString& entryName) const override;
+    qint64 entryNumBytes(IndexType idx) const override;
     qint64 readTo(QIODevice &device, const QString &entryName) const;
     qint64 readTo(QIODevice &device, IndexType idx) const;
 

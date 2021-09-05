@@ -103,6 +103,15 @@ QByteArray QVZipFile::read(const QString &entryName) const
     return bytes;
 }
 
+qint64 QVZipFile::entryNumBytes(QVZipFile::IndexType idx) const
+{
+    Q_ASSERT(pImpl->zipHandle);
+    zip_entry_openbyindex(pImpl->zipHandle, idx);
+    const auto numBytes = zip_entry_size(pImpl->zipHandle);
+    zip_entry_close(pImpl->zipHandle);
+    return numBytes;
+}
+
 qint64 QVZipFile::readTo(QIODevice &device, const QString &entryName) const
 {
     Q_ASSERT(pImpl->entryToIndex.count(entryName));

@@ -8,6 +8,7 @@
 #include <QSize>
 #include <QString>
 #include <QDateTime>
+#include "qvarchivefile.h"
 
 struct QVImageInfo {
     enum class ArchiveType {
@@ -30,9 +31,9 @@ struct QVImageInfo {
         return imageInfo;
     }
 
-    static QVImageInfo createFromArchiveEntry(QByteArray &data, const QString &archivePath, const QString &entryPath) {
+    static QVImageInfo createFromArchiveEntry(QByteArray &data, const QVArchiveFile &file, const QString &entryPath) {
         QVImageInfo imageInfo;
-        imageInfo.archivePath = archivePath;
+        imageInfo.archivePath = file.getFilePath();
         imageInfo.entryPath = entryPath;
         imageInfo.numBytes = data.size();
         imageInfo.archiveType = ArchiveType::LocalZipFile;
@@ -47,7 +48,7 @@ struct QVImageInfo {
             buffer.close();
         }
 
-        QFileInfo archiveFileInfo(archivePath);
+        QFileInfo archiveFileInfo(file.getFilePath());
         imageInfo.modifiedDateTime = archiveFileInfo.lastModified();
         return imageInfo;
     }

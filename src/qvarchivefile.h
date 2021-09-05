@@ -20,6 +20,17 @@ public:
     virtual const QStringList &listEntries() const = 0;
     virtual QByteArray read(IndexType idx) const = 0;
     virtual QByteArray read(const QString& entryName) const = 0;
+    virtual qint64 entryNumBytes(IndexType idx) const = 0;
+    qint64 entryNumBytes(const QString &entryName) const {
+        const auto &entries = listEntries();
+        const auto entryIdx = entries.indexOf(entryName);
+
+        if (entryIdx >= 0) {
+            return entryNumBytes(entryIdx);
+        }
+
+        return -1;
+    }
 
     qint64 numEntries() const { return listEntries().size(); }
 
