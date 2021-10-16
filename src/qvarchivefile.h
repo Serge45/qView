@@ -8,6 +8,11 @@ class QIODevice;
 
 class QVArchiveFile {
 public:
+    enum class ErrorCode : unsigned {
+        ok = 0,
+        noAvailableEntry,
+        invalidArchive
+    };
     using IndexType = long;
     QVArchiveFile() = default;
     QVArchiveFile(const QVArchiveFile &) = delete;

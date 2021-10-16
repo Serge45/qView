@@ -119,8 +119,22 @@ void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, std::size_t idx)
     setPaused(true);
     currentFileDetails.isLoadRequested = true;
 
-    Q_ASSERT(archiveFile.isValid());
+    if (!archiveFile.isValid()) {
+        emit readError(static_cast<int>(QVArchiveFile::ErrorCode::invalidArchive),
+                       tr("Invalid archive"),
+                       archiveFile.getFilePath());
+        return;
+    }
+
     const auto &fileList = archiveFile.listEntries();
+
+    if (idx >= static_cast<std::size_t>(fileList.size())) {
+        emit readError(static_cast<int>(QVArchiveFile::ErrorCode::noAvailableEntry),
+                       tr("No supported entry"),
+                       archiveFile.getFilePath());
+        return;
+    }
+
     Q_ASSERT(idx < static_cast<std::size_t>(fileList.size()));
     auto entryPath = fileList[idx];
 
@@ -220,8 +234,6 @@ QVImageCore::ReadData QVImageCore::readFile(const QString &fileName, bool forCac
     {
         emit readError(imageReader.error(), imageReader.errorString(), readData.fileInfo.fileName());
     }
-
-
 
     return readData;
 }
