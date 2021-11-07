@@ -1,6 +1,7 @@
 #include "qvimagecore.h"
 #include "qvapplication.h"
 #include "qvzipfile.h"
+#include "qvrarfile.h"
 #include <random>
 #include <QMessageBox>
 #include <QDir>
@@ -85,6 +86,10 @@ void QVImageCore::loadFile(const QString &fileName)
 
     if (QStringList{"zip", "cbz"}.count(fileInfo.suffix().toLower())) {
         QScopedPointer<QVArchiveFile> zipFile(new QVZipFile(fileName));
+        qSwap(currentArchiveFile, zipFile);
+        return loadArchiveFile(*currentArchiveFile, 0);
+    } else if (QStringList{"cbr"}.count(fileInfo.suffix().toLower())) {
+        QScopedPointer<QVArchiveFile> zipFile(new QVRarFile(fileName));
         qSwap(currentArchiveFile, zipFile);
         return loadArchiveFile(*currentArchiveFile, 0);
     }

@@ -1,16 +1,14 @@
-#ifndef QVZIPFILE_H
-#define QVZIPFILE_H
+#ifndef QVRARFILE_H
+#define QVRARFILE_H
 
+#include <QString>
 #include "qvarchivefile.h"
-#include <QFileInfoList>
-#include <QScopedPointer>
-#include <QStringList>
 
-class QVZipFile : public QVArchiveFile
+class QVRarFile : public QVArchiveFile
 {
 public:
-    explicit QVZipFile(const QString &filepath);
-    ~QVZipFile();
+    explicit QVRarFile(const QString &filepath);
+    ~QVRarFile() override = default;
     bool isValid() const override;
     QString getFilePath() const override { return filepath; }
     const QStringList &listEntries() const override;
@@ -24,4 +22,4 @@ private:
     QString filepath;
 };
 
-#endif // QVZIPFILE_H
+#endif // QVRARFILE_H

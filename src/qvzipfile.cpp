@@ -65,21 +65,6 @@ const QStringList &QVZipFile::listEntries() const
     return pImpl->fileNameList;
 }
 
-QFileInfoList QVZipFile::fileInfoList() const
-{
-    using std::begin;
-    using std::end;
-
-    const auto fileList = listEntries();
-    QFileInfoList fileInfoList;
-
-    std::transform(begin(fileList), end(fileList), std::back_inserter(fileInfoList), [] (auto fileName) {
-        return QFileInfo(fileName);
-    });
-
-    return fileInfoList;
-}
-
 QByteArray QVZipFile::read(QVZipFile::IndexType index) const
 {
     index = pImpl->entryToIndex[pImpl->fileNameList[index]];
@@ -110,17 +95,4 @@ qint64 QVZipFile::entryNumBytes(QVZipFile::IndexType idx) const
     const auto numBytes = zip_entry_size(pImpl->zipHandle);
     zip_entry_close(pImpl->zipHandle);
     return numBytes;
-}
-
-qint64 QVZipFile::readTo(QIODevice &device, const QString &entryName) const
-{
-    Q_ASSERT(pImpl->entryToIndex.count(entryName));
-    const auto idx = pImpl->entryToIndex[entryName];
-    return readTo(device, idx);
-}
-
-qint64 QVZipFile::readTo(QIODevice &device, IndexType idx) const
-{
-    const auto bytes = read(idx);
-    return device.write(bytes);
 }

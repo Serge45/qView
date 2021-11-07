@@ -1,3 +1,6 @@
 [submodule "3rdparty/zip"]
 	path = 3rdparty/zip
 	url = https://github.com/kuba--/zip.git
+[submodule "3rdparty/dmc_unrar"]
+	path = 3rdparty/dmc_unrar
+	url = https://github.com/DrMcCoy/dmc_unrar.git
