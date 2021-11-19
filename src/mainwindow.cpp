@@ -429,7 +429,8 @@ void MainWindow::buildWindowTitle()
             if (getCurrentFileDetails().fileInfo.isFile()) {
                 newString += " - " + QVInfoDialog::formatBytes(getCurrentFileDetails().fileInfo.size());
             } else if (auto *entry = graphicsView->getLoadedArchiveEntry()) {
-                newString += " - " + QVInfoDialog::formatBytes(entry->buffer().size());
+                auto entryPath = getCurrentFileDetails().fileInfo.filePath();
+                newString += " - " + QVInfoDialog::formatBytes(graphicsView->cachedArchiveImageInfo(entryPath).numBytes);
             } else {
                 newString = "qView";
                 break;
