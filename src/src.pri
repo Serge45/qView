@@ -1,3 +1,4 @@
+DEFINES += "DMC_UNRAR_DISABLE_MALLOC=1"
 SOURCES += \
     $$PWD/main.cpp \
     $$PWD/mainwindow.cpp \
