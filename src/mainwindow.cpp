@@ -394,9 +394,7 @@ void MainWindow::refreshProperties()
 {
     if (auto *archiveEntry = graphicsView->getLoadedArchiveEntry()) {
         const auto entryPath = graphicsView->getCurrentFileDetails().fileInfo.filePath();
-        info->setInfo(QVImageInfo::createFromArchiveEntry(archiveEntry->buffer(),
-                                                          *graphicsView->getLoadedArchiveFile(),
-                                                          entryPath));
+        info->setInfo(graphicsView->cachedArchiveImageInfo(entryPath));
     } else {
         info->setInfo(QVImageInfo::createFromFileInfo(getCurrentFileDetails().fileInfo));
     }

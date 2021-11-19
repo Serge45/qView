@@ -63,6 +63,7 @@ public:
     QBuffer *getLoadedArchiveEntry() { return imageCore.loadedArchiveEntry(); }
     const QVArchiveFile *getLoadedArchiveFile() const { return imageCore.archiveFile(); }
     QString getCurrentlyLoadedFilePath() const;
+    const QVImageInfo &cachedArchiveImageInfo(const QString &entryPath) const { return imageCore.archiveImageInfo(entryPath); }
 
 signals:
     void cancelSlideshow();

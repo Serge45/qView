@@ -131,6 +131,7 @@ void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, std::size_t idx)
         return;
     }
 
+    cachedEntryInfo.clear();
     const auto &fileList = archiveFile.listEntries();
 
     if (idx >= static_cast<std::size_t>(fileList.size())) {
@@ -144,11 +145,6 @@ void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, std::size_t idx)
     auto entryPath = fileList[idx];
 
     QPixmap cachedPixmap;
-    currentLoadedArchiveEntry.reset(new QBuffer);
-    currentLoadedArchiveEntry->open(QIODevice::ReadWrite);
-    archiveFile.readTo(*currentLoadedArchiveEntry, static_cast<QVZipFile::IndexType>(idx));
-    currentLoadedArchiveEntry->seek(0);
-
     if (QPixmapCache::find(QFileInfo(entryPath).absoluteFilePath(), &cachedPixmap)) {
         loadPixmap({cachedPixmap,
                     QFileInfo(entryPath),
@@ -157,8 +153,14 @@ void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, std::size_t idx)
         return;
     }
 
+    currentLoadedArchiveEntry.reset(new QBuffer);
+    currentLoadedArchiveEntry->open(QIODevice::ReadWrite);
+    archiveFile.readTo(*currentLoadedArchiveEntry, static_cast<QVZipFile::IndexType>(idx));
+    currentLoadedArchiveEntry->seek(0);
     auto readData = readFromIODevice(currentLoadedArchiveEntry.get(), fileList[static_cast<QVZipFile::IndexType>(idx)]);
     currentLoadedArchiveEntry->seek(0);
+    cachedEntryInfo[entryPath]
+            = QVImageInfo::createFromArchiveEntry(currentLoadedArchiveEntry.get()->buffer(), archiveFile, entryPath);
     loadPixmap(readData, false);
 }
 
@@ -173,10 +175,6 @@ void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, const QString &ent
     Q_ASSERT(archiveFile.isValid());
 
     QPixmap cachedPixmap;
-    currentLoadedArchiveEntry.reset(new QBuffer);
-    currentLoadedArchiveEntry->open(QIODevice::ReadWrite);
-    archiveFile.readTo(*currentLoadedArchiveEntry, entryPath);
-    currentLoadedArchiveEntry->seek(0);
 
     if (QPixmapCache::find(QFileInfo(entryPath).absoluteFilePath(), &cachedPixmap)) {
         loadPixmap({cachedPixmap,
@@ -186,8 +184,14 @@ void QVImageCore::loadArchiveFile(QVArchiveFile &archiveFile, const QString &ent
         return;
     }
 
+    currentLoadedArchiveEntry.reset(new QBuffer);
+    currentLoadedArchiveEntry->open(QIODevice::ReadWrite);
+    archiveFile.readTo(*currentLoadedArchiveEntry, entryPath);
+    currentLoadedArchiveEntry->seek(0);
     auto readData = readFromIODevice(currentLoadedArchiveEntry.get(), entryPath);
     currentLoadedArchiveEntry->seek(0);
+    cachedEntryInfo[entryPath]
+            = QVImageInfo::createFromArchiveEntry(currentLoadedArchiveEntry.get()->buffer(), archiveFile, entryPath);
     loadPixmap(readData, false);
 }
 
@@ -450,6 +454,7 @@ void QVImageCore::requestCacheArchiveEntry(const QString &entryPath)
     QSharedPointer<QBuffer> buffer(new QBuffer(sharedData.get()));
     buffer->open(QBuffer::ReadWrite);
     archiveFile()->readTo(*buffer, entryPath);
+    cachedEntryInfo[entryPath] = QVImageInfo::createFromArchiveEntry(buffer->buffer(), *currentArchiveFile, entryPath);
     QImageReader newImageReader(buffer.get());
     QTransform transform;
     transform.rotate(currentRotation);

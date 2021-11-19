@@ -12,6 +12,7 @@
 #include <QTimer>
 #include <QCache>
 #include <QScopedPointer>
+#include "qvimageinfo.h"
 
 class QVImageCore : public QObject
 {
@@ -84,6 +85,7 @@ public:
     const QVArchiveFile *archiveFile() const { return currentArchiveFile.data(); }
     QBuffer *loadedArchiveEntry() { return currentLoadedArchiveEntry.get(); }
     const QBuffer *loadedArchiveEntry() const { return currentLoadedArchiveEntry.data(); }
+    const QVImageInfo &archiveImageInfo(const QString& entryPath) const { return *cachedEntryInfo.find(entryPath);}
 
 signals:
     void animatedFrameChanged(QRect rect);
@@ -119,6 +121,7 @@ private:
 
     QScopedPointer<QVArchiveFile> currentArchiveFile;
     QScopedPointer<QBuffer> currentLoadedArchiveEntry;
+    QMap<QString, QVImageInfo> cachedEntryInfo;
 };
 
 #endif // QVIMAGECORE_H
