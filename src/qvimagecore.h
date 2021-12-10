@@ -80,7 +80,7 @@ public:
     const QMovie& getLoadedMovie() const {return loadedMovie; }
     const FileDetails& getCurrentFileDetails() const {return currentFileDetails; }
     int getCurrentRotation() const {return currentRotation; }
-    bool archiveMode() const { return currentArchiveFile; }
+    bool archiveMode() const { return currentArchiveFile.get(); }
     QVArchiveFile *archiveFile() { return currentArchiveFile.get(); }
     const QVArchiveFile *archiveFile() const { return currentArchiveFile.data(); }
     QBuffer *loadedArchiveEntry() { return currentLoadedArchiveEntry.get(); }
