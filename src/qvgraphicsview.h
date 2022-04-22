@@ -37,6 +37,7 @@ public:
     QMimeData* getMimeData() const;
     void loadMimeData(const QMimeData *mimeData);
     void loadFile(const QString &fileName);
+    void loadDir(const QDir &dir);
 
     void zoomIn(const QPoint &pos = QPoint(-1, -1));
 

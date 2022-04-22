@@ -212,20 +212,55 @@ void QVGraphicsView::loadMimeData(const QMimeData *mimeData)
     bool first = true;
     for (const auto &url : urlList)
     {
-        if (first)
+        const QDir dir(url.toLocalFile());
+
+        if (dir.exists())
         {
-            loadFile(url.toString());
-            emit cancelSlideshow();
-            first = false;
-            continue;
+            if (first)
+            {
+                loadDir(dir);
+                emit cancelSlideshow();
+                first = false;
+                continue;
+            }
+
+            QVApplication::openDir(dir);
         }
-        QVApplication::openFile(url.toString());
+        else
+        {
+            if (first)
+            {
+                loadFile(url.toString());
+                emit cancelSlideshow();
+                first = false;
+                continue;
+            }
+
+            QVApplication::openFile(url.toString());
+        }
     }
 }
 
 void QVGraphicsView::loadFile(const QString &fileName)
 {
     imageCore.loadFile(fileName);
+}
+
+void QVGraphicsView::loadDir(const QDir &dir)
+{
+    QDirIterator iter(dir);
+
+    while (iter.hasNext())
+    {
+        const auto fileInfo = QFileInfo(iter.next());
+        const auto ext = "*." + fileInfo.suffix();
+
+        if (!fileInfo.isDir() && fileInfo.exists() && qvApp->getFilterList().count(ext))
+        {
+            loadFile(fileInfo.absoluteFilePath());
+            break;
+        }
+    }
 }
 
 void QVGraphicsView::postLoad()

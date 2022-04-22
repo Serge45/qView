@@ -114,6 +114,8 @@ public:
 public slots:
     void openFile(const QString &fileName);
 
+    void openDir(const QDir &dir);
+
     void toggleSlideshow();
 
     void slideshowAction();

@@ -103,6 +103,19 @@ void QVApplication::openFile(const QString &file, bool resize)
     QVApplication::openFile(window, file, resize);
 }
 
+void QVApplication::openDir(MainWindow *window, const QDir &dir, bool resize)
+{
+    window->setJustLaunchedWithImage(resize);
+    window->openDir(dir);
+}
+
+void QVApplication::openDir(const QDir &dir, bool resize)
+{
+    auto *window = qvApp->getMainWindow(true);
+
+    QVApplication::openDir(window, dir, resize);
+}
+
 void QVApplication::pickFile(MainWindow *parent)
 {
     QSettings settings;

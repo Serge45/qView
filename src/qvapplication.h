@@ -33,6 +33,10 @@ public:
 
     static void openFile(const QString &file, bool resize = true);
 
+    static void openDir(MainWindow *window, const QDir &dir, bool resize = true);
+
+    static void openDir(const QDir &dir, bool resize = true);
+
     static void pickFile(MainWindow *parent = nullptr);
 
     static void pickUrl(MainWindow *parnet = nullptr);

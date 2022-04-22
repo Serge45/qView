@@ -254,6 +254,12 @@ void MainWindow::openFile(const QString &fileName)
     cancelSlideshow();
 }
 
+void MainWindow::openDir(const QDir &dir)
+{
+    graphicsView->loadDir(dir);
+    cancelSlideshow();
+}
+
 void MainWindow::settingsUpdated()
 {
     auto &settingsManager = qvApp->getSettingsManager();
