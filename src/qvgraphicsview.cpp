@@ -210,8 +210,8 @@ void QVGraphicsView::loadMimeData(const QMimeData *mimeData)
     const QList<QUrl> urlList = mimeData->urls();
 
     bool first = true;
-    for (const auto &url : urlList)
-    {
+
+    const auto handleAsDir = [&first, this](const QUrl &url) -> bool {
         const QDir dir(url.toLocalFile());
 
         if (dir.exists())
@@ -221,22 +221,36 @@ void QVGraphicsView::loadMimeData(const QMimeData *mimeData)
                 loadDir(dir);
                 emit cancelSlideshow();
                 first = false;
-                continue;
             }
+            else
+            {
+                QVApplication::openDir(dir);
+            }
+            return true;
+        }
 
-            QVApplication::openDir(dir);
+        return false;
+    };
+
+    const auto handleAsFile = [&first, this](const QUrl &url) {
+        if (first)
+        {
+            loadFile(url.toString());
+            emit cancelSlideshow();
+            first = false;
         }
         else
         {
-            if (first)
-            {
-                loadFile(url.toString());
-                emit cancelSlideshow();
-                first = false;
-                continue;
-            }
-
             QVApplication::openFile(url.toString());
+        }
+    };
+
+    for (const auto &url : urlList)
+    {
+        const auto ok = handleAsDir(url);
+
+        if (!ok) {
+            handleAsFile(url);
         }
     }
 }
